@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Guru SMK - KIK & Basis Data</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --text: #0f172a;
+            --border: #e2e8f0;
+            --success: #16a34a;
+            --danger: #dc2626;
+        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); margin: 0; padding: 10px; font-size: 13px; }
+        
+        /* NAVIGATION BAR */
+        .main-nav { display: flex; gap: 4px; background: #0f172a; padding: 6px; border-radius: 8px; margin-bottom: 10px; overflow-x: auto; }
+        .main-nav button { background: transparent; color: #94a3b8; border: none; padding: 8px 12px; font-weight: bold; border-radius: 6px; white-space: nowrap; width: auto; cursor: pointer; }
+        .main-nav button.active { background: var(--primary); color: white; }
+
+        /* SUB NAVIGATION (KELAS) */
+        .sub-nav { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
+        .sub-nav button { background: #e2e8f0; color: #334155; border: none; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 20px; white-space: nowrap; width: auto; cursor: pointer; }
+        .sub-nav button.active { background: #334155; color: white; }
+
+        /* CARDS & UI ELEMENTS */
+        .card { background: var(--card); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .siswa-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .siswa-info { font-weight: bold; font-size: 14px; color: #1e293b; }
+        .action-grid { display: grid; grid-template-columns: repeat(4, 1fr) 2fr; gap: 4px; }
+        
+        input, select, button { padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; width: 100%; }
+        button.btn-act { font-weight: bold; color: white; border: none; cursor: pointer; }
+        .btn-h { background: var(--success); }
+        .btn-s { background: #eab308; }
+        .btn-i { background: #0284c7; }
+        .btn-a { background: var(--danger); }
+        .btn-primary { background: var(--primary); color: white; font-weight: bold; border: none; }
+        
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
+        th, td { border: 1px solid var(--border); padding: 6px; text-align: center; }
+        th { background: #0f172a; color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- MAIN MENU -->
+    <div class="main-nav">
+        <button id="nav-kik" class="active" onclick="switchMapel('KIK')">📘 KIK</button>
+        <button id="nav-bd" onclick="switchMapel('Basis Data')">🗄️ Basis Data</button>
+        <button id="nav-periodik" onclick="switchTab('periodik')">📝 UTS/UAS/Sikap</button>
+        <button id="nav-rekap" onclick="switchTab('rekap')">📊 Rekap Excel</button>
+    </div>
+
+    <!-- SUB MENU KELAS (Dinamis berdasarkan mapel) -->
+    <div id="container-subnav" class="sub-nav"></div>
+
+    <!-- VIEW 1: KBM HARIAN (KIK & BASIS DATA) -->
+    <div id="view-harian">
+        <div class="card" style="background:#eff6ff;">
+            <span id="label-kbm" style="font-weight:bold; color:#1e40af;">Input Harian</span>
+        </div>
+        <div id="list-siswa-harian"></div>
+    </div>
+
+    <!-- VIEW 2: PENILAIAN PERIODIK (UTS / UAS / SIKAP) -->
+    <div id="view-periodik" style="display:none;">
+        <div class="card">
+            <h3>Input Nilai Periodik & Karakter</h3>
+            <div style="display:flex; gap:6px; margin-bottom:8px;">
+                <select id="p-mapel" onchange="updateSiswaPeriodik()"><option value="KIK">KIK</option><option value="Basis Data">Basis Data</option></select>
+                <select id="p-kelas" onchange="updateSiswaPeriodik()"></select>
+            </div>
+            <select id="p-siswa" style="margin-bottom:8px;"></select>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; margin-bottom:8px;">
+                <input type="number" id="p-karakter" placeholder="Sikap (0-100)">
+                <input type="number" id="p-uts" placeholder="UTS">
+                <input type="number" id="p-uas" placeholder="UAS">
+            </div>
+            <button class="btn-primary" onclick="simpanPeriodik()">Simpan Nilai Periodik</button>
+        </div>
+    </div>
+
+    <!-- VIEW 3: REKAP & EXPORT -->
+    <div id="view-rekap" style="display:none;">
+        <div class="card">
+            <h3>Rekap Nilai Akhir</h3>
+            <div style="display:flex; gap:6px; margin-bottom:8px;">
+                <select id="r-mapel" onchange="renderRekap()"><option value="KIK">KIK</option><option value="Basis Data">Basis Data</option></select>
+                <select id="r-kelas" onchange="renderRekap()"></select>
+            </div>
+            <button class="btn-primary" style="background:var(--success); padding:10px; margin-bottom:8px;" onclick="copyToExcel()">📋 COPY TABEL REKAP EXCEL</button>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th><th>Nama</th><th>Kelas</th><th>Hadir (%)</th><th>Sikap</th><th>Rata Teori</th><th>Rata Praktik</th><th>UTS</th><th>UAS</th><th>NA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="body-rekap"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Siswa Pindahan / Baru</h3>
+            <input type="text" id="add-nama" placeholder="Nama Lengkap" style="margin-bottom:6px;">
+            <select id="add-kelas" style="margin-bottom:6px;">
+                <option value="XI PPLG 3">XI PPLG 3</option><option value="XI PPLG 4">XI PPLG 4</option>
+                <option value="XII PPLG 2">XII PPLG 2</option><option value="XII PPLG 3">XII PPLG 3</option><option value="XII PPLG 4">XII PPLG 4</option>
+            </select>
+            <button class="btn-primary" onclick="tambahSiswa()">+ Tambah Siswa</button>
+        </div>
+    </div>
+
+    <script>
+        const mapelKelas = {
+            "KIK": ["XI PPLG 3", "XI PPLG 4", "XII PPLG 3", "XII PPLG 4"],
+            "Basis Data": ["XII PPLG 2", "XII PPLG 3", "XII PPLG 4"]
+        };
+
+        const rawData = [
+            // XI PPLG 3
+            ["XI PPLG 3", "Agis Agustina"], ["XI PPLG 3", "ALVIN GHANY YUSUF"], ["XI PPLG 3", "ANITA PUTRI PRATAMA"], ["XI PPLG 3", "ARSALANSYAH ALIF RAMADHAN"], ["XI PPLG 3", "BELA NOVIA CHANDRA"], ["XI PPLG 3", "CHINDY ANDIANI"], ["XI PPLG 3", "CINTAMI AZMI LEANDRA"], ["XI PPLG 3", "DEA PUTRI"], ["XI PPLG 3", "FADDIL MUHAMMAD"], ["XI PPLG 3", "FAHRI PRATAMA"], ["XI PPLG 3", "FARHAN RAHMAT FAUZAN"], ["XI PPLG 3", "Indra Kusumah"], ["XI PPLG 3", "Irsyad Adji Pratama"], ["XI PPLG 3", "IVONNE HARUM"], ["XI PPLG 3", "KIRANI ZIFANA PUTRI"], ["XI PPLG 3", "M. FAHRI ALFARIZI"], ["XI PPLG 3", "M. Iqbal Ibrahim"], ["XI PPLG 3", "MAULANA ALDIANSYAH"], ["XI PPLG 3", "MELLY RAHMAWATI"], ["XI PPLG 3", "Miska Leoni"], ["XI PPLG 3", "MUHAMAD MAULANA MULYADI"], ["XI PPLG 3", "MUHAMAD RICO DWITAMA"], ["XI PPLG 3", "MUHAMMAD DEMAR ALFI"], ["XI PPLG 3", "Muhammad Iqbal"], ["XI PPLG 3", "Muhammad Rivaldo"], ["XI PPLG 3", "NAUPAL WARADANA"], ["XI PPLG 3", "NAZWA ALIKA SAVITRI"], ["XI PPLG 3", "NURMAN RAMADHAN"], ["XI PPLG 3", "Raffa Ghiffary Putra Pratama"], ["XI PPLG 3", "RAHMA MONICA"], ["XI PPLG 3", "Regian Saputra"], ["XI PPLG 3", "Reyvan Danupradana Sudarmo"], ["XI PPLG 3", "RIZKY MAULANA"], ["XI PPLG 3", "SANDY KURNIA"], ["XI PPLG 3", "Sindi Saskia Kalsa Yuniar"], ["XI PPLG 3", "SITI JULIA NITA"], ["XI PPLG 3", "SYAHLA SAUFIKA ALKALIFI"], ["XI PPLG 3", "SYALMA AMALIA"], ["XI PPLG 3", "TIARAH DESTIYANI"], ["XI PPLG 3", "Wizdan Rustansyah"], ["XI PPLG 3", "Zakariya Nazril Rahman"], ["XI PPLG 3", "ZIKRA RAMANDA SULAEMAN"],
+            // XI PPLG 4
+            ["XI PPLG 4", "Ahmad Fahri Zulfikar"], ["XI PPLG 4", "ALISA RAMADANI"], ["XI PPLG 4", "Alpino Frilian"], ["XI PPLG 4", "Aria Yudha Maulana"], ["XI PPLG 4", "ASSYIFA OKTAVIANI"], ["XI PPLG 4", "BAGUS TRIHAQSO"], ["XI PPLG 4", "CYNTHIA RAMADHANI SAPUTRA"], ["XI PPLG 4", "Eka Maulana Adzandra"], ["XI PPLG 4", "ENGJELLITA DESTIANA"], ["XI PPLG 4", "FATIH WIRA ARMANI"], ["XI PPLG 4", "Fauzi Abdillah Apriyandi"], ["XI PPLG 4", "IKHLAS SYAHRANI"], ["XI PPLG 4", "IREN IRYANI"], ["XI PPLG 4", "Khairul Ihsan"], ["XI PPLG 4", "M. FADLI FUDHON AL CHERED"], ["XI PPLG 4", "M. PANJI KOMARA"], ["XI PPLG 4", "MAHERA  RAHMA"], ["XI PPLG 4", "Muhamad Andreyan"], ["XI PPLG 4", "MUHAMAD GHIFARIE"], ["XI PPLG 4", "MUHAMAD RIJAL"], ["XI PPLG 4", "MUHAMAD RIZKY ARBIAN"], ["XI PPLG 4", "MUHAMMAD AFKAAR JIYAAD"], ["XI PPLG 4", "Muhammad Lidan Kurnia Putra"], ["XI PPLG 4", "MUHAMMAD RADILA FIRANSYAH"], ["XI PPLG 4", "NAJLA NUR JIHAN"], ["XI PPLG 4", "NATASYA AYU"], ["XI PPLG 4", "Nazwah Sasqia Almuhyi"], ["XI PPLG 4", "NOUFAL FAIZA NOVRILIANO"], ["XI PPLG 4", "PADIL RAMADAN"], ["XI PPLG 4", "Rafa Putra Fatanda"], ["XI PPLG 4", "Rehan"], ["XI PPLG 4", "Renita Regina Putri"], ["XI PPLG 4", "RISTIANSYAH"], ["XI PPLG 4", "BILQIS NURUN SYAFITRI"], ["XI PPLG 4", "Ristyani Putri"], ["XI PPLG 4", "RIZKY JAYA RAMADHAN"], ["XI PPLG 4", "SALSA LIQIA NOVA"], ["XI PPLG 4", "SATRIA MOHAMAD PRATAMA"], ["XI PPLG 4", "TIFANI SEPTIA RAMADANIA"], ["XI PPLG 4", "Wildan Rihansyah"], ["XI PPLG 4", "YANKI ALFARIZZY SALAM"], ["XI PPLG 4", "Zaskia Oktaviani"], ["XI PPLG 4", "Zauri Radhitya Paksy"],
+            // XII PPLG 2
+            ["XII PPLG 2", "Abdul Azis"], ["XII PPLG 2", "Alda Lukvita Ramadhan"], ["XII PPLG 2", "Algathan Sadika"], ["XII PPLG 2", "Andi Muhammad Fauzan Aqilla"], ["XII PPLG 2", "Beby Azhar"], ["XII PPLG 2", "Bisma Aditya"], ["XII PPLG 2", "Deffan Rizki Maulia Alvalenta"], ["XII PPLG 2", "Duyu Candra"], ["XII PPLG 2", "Fadli Ramadan"], ["XII PPLG 2", "Feri Abdul Rahman Ramdani"], ["XII PPLG 2", "Haikal Maulana"], ["XII PPLG 2", "Ika"], ["XII PPLG 2", "Kayla Berlian Virdie"], ["XII PPLG 2", "Khafi Raytama"], ["XII PPLG 2", "M. Alif Ibrahim"], ["XII PPLG 2", "M. Eggy Arga Pratama"], ["XII PPLG 2", "M. Farel Adiguna"], ["XII PPLG 2", "M. Fathian Akbar Al-Fatih"], ["XII PPLG 2", "M. Nizar Maulana Hakiki"], ["XII PPLG 2", "M. Rio Irawan"], ["XII PPLG 2", "Maulana Avrizal"], ["XII PPLG 2", "Moch Ridho Andauzzi"], ["XII PPLG 2", "Muhamad Doli Hambali"], ["XII PPLG 2", "Muhammad Ali KS"], ["XII PPLG 2", "Muhammad Fadly Alkahfi Akbar"], ["XII PPLG 2", "Muhammad Rifky Rojabi Muchtar"], ["XII PPLG 2", "Nikita"], ["XII PPLG 2", "Noval Apandi"], ["XII PPLG 2", "Raihan Paturohman"], ["XII PPLG 2", "Raisya Putri Awalia"], ["XII PPLG 2", "Rifki Al-Banani"], ["XII PPLG 2", "Rika Apriani"], ["XII PPLG 2", "Rizwan Febrianto"], ["XII PPLG 2", "Sabila Framesti Yahya"], ["XII PPLG 2", "Saprida Fatmawati"], ["XII PPLG 2", "Sindi  Noviyanti"], ["XII PPLG 2", "Siti Zaenah"], ["XII PPLG 2", "Tasya Yasmin Assyifa"], ["XII PPLG 2", "Vikri Maulana Darojat"], ["XII PPLG 2", "Yasmin Nurpadilah Wahyudin"],
+            // XII PPLG 3
+            ["XII PPLG 3", "Adi Saepul Ramdan"], ["XII PPLG 3", "Aliep Zikry Setiawan"], ["XII PPLG 3", "Allyssa Gustiana"], ["XII PPLG 3", "Andra Hendrawan"], ["XII PPLG 3", "Caesar Kayikal Maulana"], ["XII PPLG 3", "Chika Hartika Saputri"], ["XII PPLG 3", "Deris Alpi Syahril"], ["XII PPLG 3", "Erfan Chairul Ikhwan"], ["XII PPLG 3", "Fajar Rizki Alfiansah"], ["XII PPLG 3", "Fizli Musawaka"], ["XII PPLG 3", "Ilham Gumilar S."], ["XII PPLG 3", "Indriani Hartati"], ["XII PPLG 3", "Lara Amanda Lutfi"], ["XII PPLG 3", "Ligar Rainan Libi Barliyawan"], ["XII PPLG 3", "M. Ardhani Farand"], ["XII PPLG 3", "M. Fatir Alfarizi"], ["XII PPLG 3", "M. Rizky Ramdani"], ["XII PPLG 3", "M.Eka Purnama"], ["XII PPLG 3", "M.Fasha Wijaya Hikti Putra"], ["XII PPLG 3", "Mikal Firqin Fadlih"], ["XII PPLG 3", "Muhamad Destian Prasetia"], ["XII PPLG 3", "Muhamad Parhan Nurulgina"], ["XII PPLG 3", "Muhammad Fajar Apriadi"], ["XII PPLG 3", "Muhammad Rizky"], ["XII PPLG 3", "Murni Murniawati"], ["XII PPLG 3", "Nurul Isma"], ["XII PPLG 3", "Putri Zahratun Nisa"], ["XII PPLG 3", "Rafa Radithya Rachman"], ["XII PPLG 3", "Refal Ramadhan"], ["XII PPLG 3", "Riska Aulia Rofila"], ["XII PPLG 3", "Rizki Akbar"], ["XII PPLG 3", "Sabrina Maysan"], ["XII PPLG 3", "Samsul Hadi"], ["XII PPLG 3", "Selma Amatullah Shabira"], ["XII PPLG 3", "Siti Aenun Nissa"], ["XII PPLG 3", "Siti Zulfa"], ["XII PPLG 3", "Tazkiatun Nafisa"], ["XII PPLG 3", "Venanda Putri Lesmana"], ["XII PPLG 3", "Yoga Apriansyah"], ["XII PPLG 3", "Yuli Meylina"],
+            // XII PPLG 4
+            ["XII PPLG 4", "Al Faatir Eka Yassya"], ["XII PPLG 4", "Aldi Aldiansyah"], ["XII PPLG 4", "Alwi Sahab Febrian"], ["XII PPLG 4", "Anisa Wulandari"], ["XII PPLG 4", "Askar Muhammad Rizki"], ["XII PPLG 4", "Badru Zaman Ibrahim"], ["XII PPLG 4", "Dandi Raditya Saputra"], ["XII PPLG 4", "Dicki Putra Satria"], ["XII PPLG 4", "Diva Asofa"], ["XII PPLG 4", "Fadhil Hanif Diswanto"], ["XII PPLG 4", "Fatha Noer"], ["XII PPLG 4", "Habibi Syekh Arropi"], ["XII PPLG 4", "Iqrima Chalsiana Alviany"], ["XII PPLG 4", "Irfandi Sukma Wijaya"], ["XII PPLG 4", "Lutfhi Pajar Causar"], ["XII PPLG 4", "M Fadil Akbar"], ["XII PPLG 4", "M. Darda Pirdaus"], ["XII PPLG 4", "M. Rafid Syahir Irawan"], ["XII PPLG 4", "M. Salman Ramadhan"], ["XII PPLG 4", "M.Fikri Habibulloh"], ["XII PPLG 4", "Malia Nadhira Febrianti"], ["XII PPLG 4", "Muhamad Agustian"], ["XII PPLG 4", "Muhamad Putra Ridwan"], ["XII PPLG 4", "Muhammad Dika Syahreza"], ["XII PPLG 4", "Muhammad Kevin Xaviera"], ["XII PPLG 4", "Nabila Fitriana"], ["XII PPLG 4", "Rahman"], ["XII PPLG 4", "Rehan Afriandi"], ["XII PPLG 4", "Risti Aryani"], ["XII PPLG 4", "Rizki Maulana Ilham"], ["XII PPLG 4", "Salma Aisya Putri"], ["XII PPLG 4", "Selvi Amelia"], ["XII PPLG 4", "Septian Fahris Ramdhani"], ["XII PPLG 4", "Siti Herliana Sekarwati"], ["XII PPLG 4", "Suci Damayanti"], ["XII PPLG 4", "Syahfal Suna Zamzami"], ["XII PPLG 4", "Yosua Vincentius Metantomwate"], ["XII PPLG 4", "Yulita Dwy Puspitasari"]
+        ];
+
+        let activeMapel = 'KIK';
+        let activeKelas = 'XI PPLG 3';
+        let dbSiswa = JSON.parse(localStorage.getItem('db_guru_smk_v2'));
+
+        if(!dbSiswa) {
+            dbSiswa = rawData.map((s, idx) => ({
+                id: idx, kelas: s[0], nama: s[1],
+                nilai: {
+                    "KIK": { absen: [], teori: [], praktik: [], karakter: 80, uts: 0, uas: 0 },
+                    "Basis Data": { absen: [], teori: [], praktik: [], karakter: 80, uts: 0, uas: 0 }
+                }
+            }));
+            saveDB();
+        }
+
+        function saveDB() { localStorage.setItem('db_guru_smk_v2', JSON.stringify(dbSiswa)); }
+
+        function switchMapel(mapel) {
+            activeMapel = mapel;
+            activeKelas = mapelKelas[mapel][0];
+            
+            document.getElementById('nav-kik').className = mapel === 'KIK' ? 'active' : '';
+            document.getElementById('nav-bd').className = mapel === 'Basis Data' ? 'active' : '';
+            document.getElementById('nav-periodik').className = '';
+            document.getElementById('nav-rekap').className = '';
+
+            document.getElementById('view-harian').style.display = 'block';
+            document.getElementById('view-periodik').style.display = 'none';
+            document.getElementById('view-rekap').style.display = 'none';
+            document.getElementById('container-subnav').style.display = 'flex';
+
+            renderSubNav();
+            renderHarian();
+        }
+
+        function switchTab(tab) {
+            document.getElementById('nav-kik').className = '';
+            document.getElementById('nav-bd').className = '';
+            document.getElementById('nav-periodik').className = tab === 'periodik' ? 'active' : '';
+            document.getElementById('nav-rekap').className = tab === 'rekap' ? 'active' : '';
+
+            document.getElementById('container-subnav').style.display = 'none';
+            document.getElementById('view-harian').style.display = 'none';
+            document.getElementById('view-periodik').style.display = tab === 'periodik' ? 'block' : 'none';
+            document.getElementById('view-rekap').style.display = tab === 'rekap' ? 'block' : 'none';
+
+            if(tab === 'periodik') updateSiswaPeriodik();
+            if(tab === 'rekap') renderRekap();
+        }
+
+        function renderSubNav() {
+            const sub = document.getElementById('container-subnav');
+            sub.innerHTML = '';
+            mapelKelas[activeMapel].forEach(kls => {
+                const btn = document.createElement('button');
+                btn.innerText = kls;
+                btn.className = kls === activeKelas ? 'active' : '';
+                btn.onclick = () => {
+                    activeKelas = kls;
+                    renderSubNav();
+                    renderHarian();
+                };
+                sub.appendChild(btn);
+            });
+        }
+
+        function renderHarian() {
+            document.getElementById('label-kbm').innerText = `Mata Pelajaran: ${activeMapel} | Kelas: ${activeKelas}`;
+            const list = document.getElementById('list-siswa-harian');
+            list.innerHTML = '';
+
+            const siswas = dbSiswa.filter(s => s.kelas === activeKelas);
+            siswas.forEach(s => {
+                list.innerHTML += `
+                    <div class="card siswa-row">
+                        <div class="siswa-info">${s.nama}</div>
+                        <div class="action-grid">
+                            <button class="btn-act btn-h" onclick="quickAbsen(${s.id}, 'Hadir')">H</button>
+                            <button class="btn-act btn-s" onclick="quickAbsen(${s.id}, 'Sakit')">S</button>
+                            <button class="btn-act btn-i" onclick="quickAbsen(${s.id}, 'Izin')">I</button>
+                            <button class="btn-act btn-a" onclick="quickAbsen(${s.id}, 'Alpha')">A</button>
+                            <input type="number" placeholder="+ Nilai" onchange="quickNilai(${s.id}, this.value, this)">
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function quickAbsen(id, st) {
+            const s = dbSiswa.find(x => x.id === id);
+            s.nilai[activeMapel].absen.push(st);
+            saveDB();
+            alert(`Absen [${st}] tersimpan untuk ${s.nama}`);
+        }
+
+        function quickNilai(id, val, el) {
+            if(!val) return;
+            const s = dbSiswa.find(x => x.id === id);
+            s.nilai[activeMapel].teori.push(parseFloat(val));
+            saveDB();
+            el.value = '';
+            alert(`Nilai Harian [${val}] tersimpan untuk ${s.nama}`);
+        }
+
+        function updateSiswaPeriodik() {
+            const m = document.getElementById('p-mapel').value;
+            const selectKls = document.getElementById('p-kelas');
+            
+            // Render option kelas sesuai mapel yang dipilih
+            if(!selectKls.innerHTML || selectKls.getAttribute('data-mapel') !== m) {
+                selectKls.innerHTML = mapelKelas[m].map(k => `<option value="${k}">${k}</option>`).join('');
+                selectKls.setAttribute('data-mapel', m);
+            }
+
+            const kls = selectKls.value;
+            const selectSiswa = document.getElementById('p-siswa');
+            selectSiswa.innerHTML = dbSiswa.filter(s => s.kelas === kls).map(s => `<option value="${s.id}">${s.nama}</option>`).join('');
+        }
+
+        function simpanPeriodik() {
+            const id = document.getElementById('p-siswa').value;
+            const m = document.getElementById('p-mapel').value;
+            const s = dbSiswa.find(x => x.id == id);
+
+            const kar = parseFloat(document.getElementById('p-karakter').value);
+            const uts = parseFloat(document.getElementById('p-uts').value);
+            const uas = parseFloat(document.getElementById('p-uas').value);
+
+            if(!isNaN(kar)) s.nilai[m].karakter = kar;
+            if(!isNaN(uts)) s.nilai[m].uts = uts;
+            if(!isNaN(uas)) s.nilai[m].uas = uas;
+
+            saveDB();
+            alert(`Nilai UTS/UAS/Sikap ${s.nama} disimpan!`);
+            document.getElementById('p-karakter').value = '';
+            document.getElementById('p-uts').value = '';
+            document.getElementById('p-uas').value = '';
+        }
+
+        function renderRekap() {
+            const m = document.getElementById('r-mapel').value;
+            const selectKls = document.getElementById('r-kelas');
+            
+            if(!selectKls.innerHTML || selectKls.getAttribute('data-mapel') !== m) {
+                selectKls.innerHTML = mapelKelas[m].map(k => `<option value="${k}">${k}</option>`).join('');
+                selectKls.setAttribute('data-mapel', m);
+            }
+
+            const kls = selectKls.value;
+            const tbody = document.getElementById('body-rekap');
+            tbody.innerHTML = '';
+
+            const list = dbSiswa.filter(s => s.kelas === kls);
+            list.forEach((s, idx) => {
+                const dat = s.nilai[m];
+                let totAbsen = dat.absen.length;
+                let totHadir = dat.absen.filter(a => a === 'Hadir').length;
+                let pHadir = totAbsen > 0 ? ((totHadir/totAbsen)*100).toFixed(0) : 0;
+
+                let rTeori = dat.teori.length > 0 ? (dat.teori.reduce((a,b)=>a+b,0)/dat.teori.length).toFixed(1) : 0;
+                let rPraktik = dat.praktik.length > 0 ? (dat.praktik.reduce((a,b)=>a+b,0)/dat.praktik.length).toFixed(1) : 0;
+
+                let na = ((pHadir*0.15) + (dat.karakter*0.15) + (rTeori*0.20) + (rPraktik*0.30) + (dat.uts*0.10) + (dat.uas*0.10)).toFixed(1);
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${idx+1}</td><td style="text-align:left;">${s.nama}</td><td>${s.kelas}</td>
+                        <td>${pHadir}%</td><td>${dat.karakter}</td><td>${rTeori}</td><td>${rPraktik}</td>
+                        <td>${dat.uts}</td><td>${dat.uas}</td><td><b>${na}</b></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function copyToExcel() {
+            const m = document.getElementById('r-mapel').value;
+            const kls = document.getElementById('r-kelas').value;
+            const list = dbSiswa.filter(s => s.kelas === kls);
+
+            let txt = `REKAP NILAI ${m} - ${kls}\nNo\tNama\tKelas\tKehadiran (%)\tKarakter\tRata Teori\tRata Praktik\tUTS\tUAS\tNilai Akhir\n`;
+
+            list.forEach((s, idx) => {
+                const dat = s.nilai[m];
+                let totAbsen = dat.absen.length;
+                let totHadir = dat.absen.filter(a => a === 'Hadir').length;
+                let pHadir = totAbsen > 0 ? ((totHadir/totAbsen)*100).toFixed(0) : 0;
+
+                let rTeori = dat.teori.length > 0 ? (dat.teori.reduce((a,b)=>a+b,0)/dat.teori.length).toFixed(1) : 0;
+                let rPraktik = dat.praktik.length > 0 ? (dat.praktik.reduce((a,b)=>a+b,0)/dat.praktik.length).toFixed(1) : 0;
+                let na = ((pHadir*0.15) + (dat.karakter*0.15) + (rTeori*0.20) + (rPraktik*0.30) + (dat.uts*0.10) + (dat.uas*0.10)).toFixed(1);
+
+                txt += `${idx+1}\t${s.nama}\t${s.kelas}\t${pHadir}%\t${dat.karakter}\t${rTeori}\t${rPraktik}\t${dat.uts}\t${dat.uas}\t${na}\n`;
+            });
+
+            navigator.clipboard.writeText(txt).then(() => {
+                alert(`Data ${m} (${kls}) berhasil di-copy! Buka Excel/Sheets lalu Paste.`);
+            });
+        }
+
+        function tambahSiswa() {
+            const nama = document.getElementById('add-nama').value;
+            const kls = document.getElementById('add-kelas').value;
+            if(!nama) return alert('Nama wajib diisi!');
+
+            dbSiswa.push({
+                id: Date.now(), kelas: kls, nama: nama,
+                nilai: {
+                    "KIK": { absen: [], teori: [], praktik: [], karakter: 80, uts: 0, uas: 0 },
+                    "Basis Data": { absen: [], teori: [], praktik: [], karakter: 80, uts: 0, uas: 0 }
+                }
+            });
+            saveDB();
+            document.getElementById('add-nama').value = '';
+            alert('Siswa baru ditambahkan!');
+        }
+
+        // Init App
+        switchMapel('KIK');
+    </script>
+</body>
+</html>
