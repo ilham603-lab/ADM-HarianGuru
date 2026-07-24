@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Guru SMK - KIK & Basis Data</title>
+    <title>Dashboard Guru & Wali Kelas XII PPLG 3</title>
+    <!-- Library html2canvas untuk Ekspor Gambar Kartu Profil -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Library html2pdf.js untuk Fitur Cetak Lembar Profil PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --bg: #f8fafc;
@@ -11,118 +15,555 @@
             --primary: #2563eb;
             --primary-dark: #1d4ed8;
             --text: #0f172a;
-            --border: #e2e8f0;
-            --success: #16a34a;
-            --danger: #dc2626;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #06b6d4;
+            --sidebar-width: 300px;
         }
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background: var(--bg); color: var(--text); margin: 0; padding: 10px; font-size: 13px; }
+        * { box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); margin: 0; padding: 0; font-size: 13px; }
         
-        /* NAVIGATION BAR */
-        .main-nav { display: flex; gap: 4px; background: #0f172a; padding: 6px; border-radius: 8px; margin-bottom: 10px; overflow-x: auto; }
-        .main-nav button { background: transparent; color: #94a3b8; border: none; padding: 8px 12px; font-weight: bold; border-radius: 6px; white-space: nowrap; width: auto; cursor: pointer; }
-        .main-nav button.active { background: var(--primary); color: white; }
+        /* HEADER BAR & HAMBURGER MENU */
+        .top-bar {
+            background: #0f172a;
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .hamburger-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .hamburger-btn:hover { background: var(--primary); border-color: var(--primary); }
+        .top-title { font-size: 15px; font-weight: bold; flex-grow: 1; }
+
+        /* SIDEBAR / DRAWER MENU GARIS 3 */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: calc(-1 * var(--sidebar-width));
+            width: var(--sidebar-width);
+            height: 100%;
+            background: #0f172a;
+            color: #94a3b8;
+            z-index: 1000;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 6px 0 15px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar.open { left: 0; }
+        .sidebar-header {
+            padding: 18px 16px;
+            background: #1e293b;
+            color: white;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sidebar-header .title-box { display: flex; flex-direction: column; }
+        .sidebar-header .app-name { font-size: 15px; font-weight: 700; color: #f8fafc; }
+        .sidebar-header .app-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+        .close-btn { background: #334155; border: none; color: white; font-size: 16px; cursor: pointer; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+        .close-btn:hover { background: var(--danger); }
+        
+        .sidebar-menu { list-style: none; padding: 12px 8px; margin: 0; flex-grow: 1; overflow-y: auto; }
+        .sidebar-menu li { margin-bottom: 4px; }
+        .sidebar-menu li button {
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            color: #cbd5e1;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .sidebar-menu li button:hover, .sidebar-menu li button.active {
+            background: #1e293b;
+            color: #ffffff;
+            border-left: 4px solid var(--primary);
+        }
+        .sidebar-menu li button.active-wk {
+            background: #1e1b4b;
+            color: #818cf8;
+            border-left: 4px solid #6366f1;
+        }
+        .menu-icon { font-size: 18px; margin-top: 2px; }
+        .menu-text-container { display: flex; flex-direction: column; }
+        .menu-title { font-size: 13px; font-weight: 600; }
+        .menu-desc { font-size: 10.5px; color: #64748b; margin-top: 2px; line-height: 1.2; }
+        
+        .sidebar-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 999;
+            display: none;
+        }
+        .sidebar-overlay.show { display: block; }
+
+        /* CONTAINER UTAMA */
+        .main-content { padding: 14px; max-width: 1200px; margin: 0 auto; }
 
         /* SUB NAVIGATION (KELAS) */
         .sub-nav { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
-        .sub-nav button { background: #e2e8f0; color: #334155; border: none; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 20px; white-space: nowrap; width: auto; cursor: pointer; }
-        .sub-nav button.active { background: #334155; color: white; }
+        .sub-nav button { background: #e2e8f0; color: #334155; border: none; padding: 7px 16px; font-size: 12px; font-weight: 600; border-radius: 20px; white-space: nowrap; cursor: pointer; transition: all 0.2s; }
+        .sub-nav button.active { background: #0f172a; color: white; }
 
-        /* CARDS & UI ELEMENTS */
-        .card { background: var(--card); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .siswa-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-        .siswa-info { font-weight: bold; font-size: 14px; color: #1e293b; }
-        .action-grid { display: grid; grid-template-columns: repeat(4, 1fr) 2fr; gap: 4px; }
+        /* SEARCH BAR & CARDS */
+        .search-box { margin-bottom: 12px; }
+        .search-box input { border: 2px solid var(--border); background: #ffffff; font-weight: 500; border-radius: 8px; padding: 10px 14px; transition: border-color 0.2s; width: 100%; }
+        .search-box input:focus { border-color: var(--primary); outline: none; }
+
+        .card { background: var(--card); padding: 16px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .siswa-row { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .siswa-info { font-weight: 700; font-size: 14px; color: #1e293b; display: flex; justify-content: space-between; align-items: center; }
+        .action-grid { display: grid; grid-template-columns: repeat(4, 1fr) 2fr; gap: 6px; }
         
-        input, select, button { padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; width: 100%; }
-        button.btn-act { font-weight: bold; color: white; border: none; cursor: pointer; }
+        input, select, textarea, button { padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; width: 100%; }
+        textarea { resize: vertical; min-height: 60px; }
+        button { cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        button.btn-act { font-weight: bold; color: white; border: none; border-radius: 6px; }
         .btn-h { background: var(--success); }
-        .btn-s { background: #eab308; }
-        .btn-i { background: #0284c7; }
+        .btn-s { background: var(--warning); }
+        .btn-i { background: var(--info); }
         .btn-a { background: var(--danger); }
-        .btn-primary { background: var(--primary); color: white; font-weight: bold; border: none; }
+        .btn-primary { background: var(--primary); color: white; border: none; }
         
-        .table-container { overflow-x: auto; }
+        /* CARD PROFIL */
+        .profile-card-export {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+        .profile-avatar {
+            width: 45px;
+            height: 45px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* CHECKBOX STYLING */
+        .status-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 6px;
+            user-select: none;
+        }
+        .status-checkbox-label input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+
+        .table-container { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
         table { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
-        th, td { border: 1px solid var(--border); padding: 6px; text-align: center; }
-        th { background: #0f172a; color: white; }
+        th, td { border: 1px solid var(--border); padding: 8px; text-align: center; }
+        th { background: #0f172a; color: white; font-weight: 600; }
+
+        .badge-info { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: #e2e8f0; color: #475569; font-weight: 600; }
+        .badge-success { background: #d1fae5; color: #065f46; font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+        .badge-warning { background: #fef3c7; color: #92400e; font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+        .badge-danger { background: #fee2e2; color: #991b1b; font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+
+        /* WALI KELAS DASHBOARD CARDS */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .stat-card .num { font-size: 22px; font-weight: bold; color: var(--primary); }
+        .stat-card .label { font-size: 11px; color: var(--text-muted); }
+
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .form-label { font-size: 11px; font-weight: bold; color: var(--text-muted); margin-bottom: 3px; display: block; }
+
+        /* UNTUK FORMAT CETAK PDF */
+        .pdf-print-container {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            color: #1e293b;
+        }
+        .pdf-header {
+            text-align: center;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .pdf-table td {
+            padding: 6px;
+            border: 1px solid #cbd5e1;
+            text-align: left;
+        }
+        .pdf-table td.label-cell {
+            background: #f1f5f9;
+            font-weight: bold;
+            width: 30%;
+        }
     </style>
 </head>
 <body>
 
-    <!-- MAIN MENU -->
-    <div class="main-nav">
-        <button id="nav-kik" class="active" onclick="switchMapel('KIK')">📘 KIK</button>
-        <button id="nav-bd" onclick="switchMapel('Basis Data')">🗄️ Basis Data</button>
-        <button id="nav-periodik" onclick="switchTab('periodik')">📝 UTS/UAS/Sikap</button>
-        <button id="nav-rekap" onclick="switchTab('rekap')">📊 Rekap Excel</button>
+    <!-- OVERLAY UTAMA UNTUK SIDEBAR -->
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- SIDEBAR NAVIGASI -->
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <div class="title-box">
+                <span class="app-name">Menu Utama Navigasi</span>
+                <span class="app-sub">Dashboard Guru & Perwalian</span>
+            </div>
+            <button class="close-btn" onclick="toggleSidebar()">&times;</button>
+        </div>
+        <ul class="sidebar-menu">
+            <li>
+                <button id="nav-kik" class="active" onclick="switchMapel('KIK')">
+                    <span class="menu-icon">📘</span>
+                    <div class="menu-text-container">
+                        <span class="menu-title">Mapel KIK</span>
+                        <span class="menu-desc">Manajemen & Absensi Harian</span>
+                    </div>
+                </button>
+            </li>
+            <li>
+                <button id="nav-bd" onclick="switchMapel('Basis Data')">
+                    <span class="menu-icon">🗄️</span>
+                    <div class="menu-text-container">
+                        <span class="menu-title">Mapel Basis Data</span>
+                        <span class="menu-desc">Manajemen & Absensi Harian</span>
+                    </div>
+                </button>
+            </li>
+            <li>
+                <button id="nav-profil" onclick="switchTab('profil')">
+                    <span class="menu-icon">👤</span>
+                    <div class="menu-text-container">
+                        <span class="menu-title">Profil & Catatan Siswa</span>
+                        <span class="menu-desc">Hobi, Cita-cita & Karakter</span>
+                    </div>
+                </button>
+            </li>
+            <li>
+                <button id="nav-periodik" onclick="switchTab('periodik')">
+                    <span class="menu-icon">📝</span>
+                    <div class="menu-text-container">
+                        <span class="menu-title">Nilai UTS / UAS / Sikap</span>
+                        <span class="menu-desc">Input Nilai Evaluasi Periodik</span>
+                    </div>
+                </button>
+            </li>
+            <li>
+                <button id="nav-rekap" onclick="switchTab('rekap')">
+                    <span class="menu-icon">📊</span>
+                    <div class="menu-text-container">
+                        <span class="menu-title">Rekap Nilai & Backup</span>
+                        <span class="menu-desc">Export Excel & Pemulihan Data</span>
+                    </div>
+                </button>
+            </li>
+            <li style="border-top: 1px solid #334155; margin-top: 10px; padding-top: 10px;">
+                <button id="nav-walikelas" onclick="switchTab('walikelas')" style="background: rgba(99, 102, 241, 0.1);">
+                    <span class="menu-icon">🏫</span>
+                    <div class="menu-text-container">
+                        <span class="menu-title" style="color: #a5b4fc;">Wali Kelas XII PPLG 3</span>
+                        <span class="menu-desc" style="color: #818cf8;">Biodata, Remedial Tracker, BK & Surat</span>
+                    </div>
+                </button>
+            </li>
+        </ul>
     </div>
 
-    <!-- SUB MENU KELAS (Dinamis berdasarkan mapel) -->
-    <div id="container-subnav" class="sub-nav"></div>
-
-    <!-- VIEW 1: KBM HARIAN (KIK & BASIS DATA) -->
-    <div id="view-harian">
-        <div class="card" style="background:#eff6ff;">
-            <span id="label-kbm" style="font-weight:bold; color:#1e40af;">Input Harian</span>
-        </div>
-        <div id="list-siswa-harian"></div>
+    <!-- HEADER / TOP BAR -->
+    <div class="top-bar">
+        <button class="hamburger-btn" onclick="toggleSidebar()">
+            <span>☰</span> Menu
+        </button>
+        <div class="top-title" id="app-title">📘 Mata Pelajaran: KIK</div>
     </div>
 
-    <!-- VIEW 2: PENILAIAN PERIODIK (UTS / UAS / SIKAP) -->
-    <div id="view-periodik" style="display:none;">
-        <div class="card">
-            <h3>Input Nilai Periodik & Karakter</h3>
-            <div style="display:flex; gap:6px; margin-bottom:8px;">
-                <select id="p-mapel" onchange="updateSiswaPeriodik()"><option value="KIK">KIK</option><option value="Basis Data">Basis Data</option></select>
-                <select id="p-kelas" onchange="updateSiswaPeriodik()"></select>
+    <div class="main-content">
+        <!-- SUB MENU KELAS -->
+        <div id="container-subnav" class="sub-nav"></div>
+
+        <!-- VIEW 1: KBM HARIAN -->
+        <div id="view-harian">
+            <div class="card" style="background:#eff6ff; border-color:#bfdbfe;">
+                <span id="label-kbm" style="font-weight:bold; color:#1e40af;">Input Harian</span>
             </div>
-            <select id="p-siswa" style="margin-bottom:8px;"></select>
-            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; margin-bottom:8px;">
-                <input type="number" id="p-karakter" placeholder="Sikap (0-100)">
-                <input type="number" id="p-uts" placeholder="UTS">
-                <input type="number" id="p-uas" placeholder="UAS">
+            <div class="search-box">
+                <input type="text" id="search-harian" placeholder="🔍 Cari nama siswa di kelas ini..." oninput="renderHarian()">
             </div>
-            <button class="btn-primary" onclick="simpanPeriodik()">Simpan Nilai Periodik</button>
+            <div id="list-siswa-harian"></div>
         </div>
+
+        <!-- VIEW 2: PROFIL SISWA & EXPORT GAMBAR / LAPORAN SEKELAS -->
+        <div id="view-profil" style="display:none;">
+            <div class="card" style="background:#f0fdf4; border-color:#bbf7d0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <span id="label-profil" style="font-weight:bold; color:#166534;">Biodata & Catatan Karakter Siswa</span>
+                    <button class="btn-primary" style="background:#166534; width:auto;" onclick="exportProfilSekelas()">📄 Export Catatan Sekelas (Kirim Wali Kelas)</button>
+                </div>
+            </div>
+            <div class="search-box">
+                <input type="text" id="search-profil" placeholder="🔍 Cari nama siswa..." oninput="renderProfil()">
+            </div>
+            <div id="list-siswa-profil"></div>
+        </div>
+
+        <!-- VIEW 3: PENILAIAN PERIODIK -->
+        <div id="view-periodik" style="display:none;">
+            <div class="card">
+                <h3>Input Nilai Periodik & Karakter</h3>
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                    <select id="p-mapel" onchange="updateSiswaPeriodik()"><option value="KIK">KIK</option><option value="Basis Data">Basis Data</option></select>
+                    <select id="p-kelas" onchange="updateSiswaPeriodik()"></select>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="search-periodik" placeholder="🔍 Filter pilihan nama siswa..." oninput="filterDropdownPeriodik()">
+                </div>
+                <select id="p-siswa" style="margin-bottom:8px;" size="5"></select>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; margin-bottom:8px;">
+                    <input type="number" id="p-karakter" placeholder="Sikap (0-100)">
+                    <input type="number" id="p-uts" placeholder="UTS">
+                    <input type="number" id="p-uas" placeholder="UAS">
+                </div>
+                <button class="btn-primary" onclick="simpanPeriodik()">Simpan Nilai Periodik</button>
+            </div>
+        </div>
+
+        <!-- VIEW 4: REKAP & EXPORT -->
+        <div id="view-rekap" style="display:none;">
+            <div class="card">
+                <h3>Rekap Nilai Akhir</h3>
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                    <select id="r-mapel" onchange="renderRekap()"><option value="KIK">KIK</option><option value="Basis Data">Basis Data</option></select>
+                    <select id="r-kelas" onchange="renderRekap()"></select>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="search-rekap" placeholder="🔍 Filter baris tabel rekap..." oninput="renderRekap()">
+                </div>
+                <div style="display: flex; gap:6px; margin-bottom:8px; flex-wrap: wrap;">
+                    <button class="btn-primary" style="background:var(--success); width:auto;" onclick="copyToExcel()">📋 Copy Tabel Rekap</button>
+                    <button class="btn-primary" style="background:#0284c7; width:auto;" onclick="downloadCSV()">⬇️ Export CSV Kelas Aktif</button>
+                    <!-- FITUR EKSPOR SELURUH SISWA DARI SEMUA KELAS -->
+                    <button class="btn-primary" style="background:#6366f1; width:auto;" onclick="exportSeluruhSiswaCSV()">🌐 Download Seluruh Siswa (Semua Kelas)</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>No</th><th>Nama</th><th>Kelas</th><th>Hadir (%)</th><th>Sikap</th><th>Rata Teori</th><th>Rata Praktik</th><th>UTS</th><th>UAS</th><th>NA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="body-rekap"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- BACKUP & RESTORE DATA -->
+            <div class="card">
+                <h3>📂 Cadangan & Pemulihan Data (Backup/Restore)</h3>
+                <div style="display:flex; gap:6px; margin-bottom:6px;">
+                    <button class="btn-primary" style="background:#0284c7;" onclick="backupData()">⬇️ Export Database (.json)</button>
+                    <button class="btn-primary" style="background:var(--warning); color:black;" onclick="document.getElementById('file-restore').click()">⬆️ Import Database</button>
+                    <input type="file" id="file-restore" style="display:none;" accept=".json" onchange="restoreData(event)">
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Siswa Pindahan / Baru</h3>
+                <input type="text" id="add-nama" placeholder="Nama Lengkap" style="margin-bottom:6px;">
+                <select id="add-kelas" style="margin-bottom:6px;">
+                    <option value="XI PPLG 3">XI PPLG 3</option><option value="XI PPLG 4">XI PPLG 4</option>
+                    <option value="XII PPLG 2">XII PPLG 2</option><option value="XII PPLG 3">XII PPLG 3</option><option value="XII PPLG 4">XII PPLG 4</option>
+                </select>
+                <button class="btn-primary" onclick="tambahSiswa()">+ Tambah Siswa</button>
+            </div>
+        </div>
+
+        <!-- VIEW 5: MENU KHUSUS WALI KELAS (XII PPLG 3) -->
+        <div id="view-walikelas" style="display:none;">
+            <div class="card" style="background: #eff6ff; border-color: #93c5fd;">
+                <h2 style="margin: 0 0 6px 0; color: #1e40af;">🏫 Center Wali Kelas — XII PPLG 3</h2>
+                <div style="font-size: 12px; color: #3b82f6;">Pusat Kelola Biodata, Bimbingan & Seluk-Beluk Background Siswa Perwalian</div>
+            </div>
+
+            <!-- DASHBOARD RINGKASAN WALI KELAS -->
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="num" id="wk-total-siswa">0</div>
+                    <div class="label">Total Siswa</div>
+                </div>
+                <div class="stat-card">
+                    <div class="num" id="wk-pencapaian-ok" style="color:var(--success);">0</div>
+                    <div class="label">Pencapaian OK</div>
+                </div>
+                <div class="stat-card">
+                    <div class="num" id="wk-pencapaian-pending" style="color:var(--warning);">0</div>
+                    <div class="label">Belum Achieved</div>
+                </div>
+                <div class="stat-card">
+                    <div class="num" id="wk-siswa-remed" style="color:var(--danger);">0</div>
+                    <div class="label">Siswa NA < 75</div>
+                </div>
+            </div>
+
+            <!-- SUB TAB WALI KELAS -->
+            <div style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+                <button id="btn-wk-biodata" class="btn-primary" style="background:#0f172a;" onclick="switchWkSub('biodata')">👨‍👩‍👧‍👦 Biodata Lengkap</button>
+                <button id="btn-wk-presensi" class="btn-primary" style="background:#64748b;" onclick="switchWkSub('presensi')">📊 Rekap Presensi & Sanksi</button>
+                <button id="btn-wk-remedial" class="btn-primary" style="background:#64748b;" onclick="switchWkSub('remedial')">🎯 Remedial Tracker (<75)</button>
+                <button id="btn-wk-kasus" class="btn-primary" style="background:#64748b;" onclick="switchWkSub('rekap-kasus')">📝 Catatan Kasus & BK</button>
+                <button id="btn-wk-panggilan" class="btn-primary" style="background:#64748b;" onclick="switchWkSub('panggilan')">✉️ Surat Panggilan Ortu</button>
+            </div>
+
+            <!-- SUB VIEW 1: BIODATA & BACKGROUND SISWA -->
+            <div id="wk-sub-biodata" class="card">
+                <h3>📂 Database Biodata & Background Siswa Perwalian</h3>
+                <div class="search-box">
+                    <input type="text" id="search-walikelas" placeholder="🔍 Cari nama siswa, nama ortu, alamat, status tinggal..." oninput="renderBiodataWaliKelas()">
+                </div>
+                <div id="list-biodata-walikelas"></div>
+            </div>
+
+            <!-- SUB VIEW 2: FITUR BARU - REKAP PRESENSI & SANKSI BULANAN OTOMATIS -->
+            <div id="wk-sub-presensi" class="card" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3>📊 Rekap Kehadiran Kumulatif & Sanksi Bulanan (XII PPLG 3)</h3>
+                    <button class="btn-primary" style="background:var(--success); width:auto;" onclick="exportPresensiExcel()">📥 Export Rekap Absen (.xlsx / CSV)</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>No</th><th>Nama Siswa</th><th>Hadir (H)</th><th>Sakit (S)</th><th>Izin (I)</th><th>Alpha (A)</th><th>% Kehadiran</th><th>Status / Potensi Sanksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="body-rekap-presensi-wk"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SUB VIEW 3: FITUR BARU - REMEDIAL TRACKER (MAPEL MERAH NA < 75) -->
+            <div id="wk-sub-remedial" class="card" style="display:none;">
+                <h3>🎯 Pemantauan Nilai Rapor Merah (NA < 75)</h3>
+                <p style="color: var(--text-muted); font-size: 11px;">Mendeteksi secara otomatis siswa XII PPLG 3 yang nilai akhirnya masih di bawah KKM (75) pada mapel KIK dan Basis Data.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>No</th><th>Nama Siswa</th><th>Mapel</th><th>Nilai Akhir (NA)</th><th>Status Remedial</th><th>Tindakan Wali Kelas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="body-remedial-tracker"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SUB VIEW 4: CATATAN KASUS & BIMBINGAN -->
+            <div id="wk-sub-kasus" class="card" style="display:none;">
+                <h3>Form Catatan Pelanggaran / Bimbingan Siswa</h3>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+                    <select id="wk-select-siswa"></select>
+                    <select id="wk-jenis-catatan">
+                        <option value="Positif/Prestasi">🌟 Prestasi / Catatan Positif</option>
+                        <option value="Kedisiplinan/Terlambat">⏰ Kedisiplinan / Terlambat</option>
+                        <option value="Pelanggaran">⚠️ Pelanggaran / Masalah Sanksi</option>
+                        <option value="Bimbingan BK">💬 Bimbingan Konseling / Personal</option>
+                    </select>
+                    <textarea id="wk-isi-catatan" placeholder="Tuliskan detail catatan / kejadian di sini..."></textarea>
+                    <button class="btn-primary" onclick="simpanCatatanWaliKelas()">Simpan Catatan Bimbingan</button>
+                </div>
+
+                <h3>Riwayat Catatan Perwalian XII PPLG 3</h3>
+                <div id="wk-list-catatan"></div>
+            </div>
+
+            <!-- SUB VIEW 5: TEMPLATE SURAT PANGGILAN ORTU -->
+            <div id="wk-sub-panggilan" class="card" style="display:none;">
+                <h3>Generator Surat Panggilan Orang Tua</h3>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+                    <label style="font-weight:bold;">Pilih Siswa:</label>
+                    <select id="wk-surat-siswa" onchange="generateSuratPanggilan()"></select>
+                    <label style="font-weight:bold;">Alasan Pemanggilan:</label>
+                    <input type="text" id="wk-surat-alasan" placeholder="Contoh: Ketidakhadiran tanpa keterangan > 3 hari" oninput="generateSuratPanggilan()">
+                    <label style="font-weight:bold;">Tanggal & Waktu Pertemuan:</label>
+                    <input type="text" id="wk-surat-waktu" placeholder="Contoh: Senin, 10 Oktober 2026 / Jam 09:00 WIB" oninput="generateSuratPanggilan()">
+                </div>
+                <div style="background:#f8fafc; border:1px dashed var(--primary); padding:12px; border-radius:8px; font-family:monospace; white-space:pre-wrap;" id="wk-surat-preview"></div>
+                <button class="btn-primary" style="margin-top:8px; background:var(--success);" onclick="copySuratPanggilan()">📋 Copy Surat Ke WhatsApp</button>
+            </div>
+        </div>
+
     </div>
 
-    <!-- VIEW 3: REKAP & EXPORT -->
-    <div id="view-rekap" style="display:none;">
-        <div class="card">
-            <h3>Rekap Nilai Akhir</h3>
-            <div style="display:flex; gap:6px; margin-bottom:8px;">
-                <select id="r-mapel" onchange="renderRekap()"><option value="KIK">KIK</option><option value="Basis Data">Basis Data</option></select>
-                <select id="r-kelas" onchange="renderRekap()"></select>
-            </div>
-            <button class="btn-primary" style="background:var(--success); padding:10px; margin-bottom:8px;" onclick="copyToExcel()">📋 COPY TABEL REKAP EXCEL</button>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>No</th><th>Nama</th><th>Kelas</th><th>Hadir (%)</th><th>Sikap</th><th>Rata Teori</th><th>Rata Praktik</th><th>UTS</th><th>UAS</th><th>NA</th>
-                        </tr>
-                    </thead>
-                    <tbody id="body-rekap"></tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card">
-            <h3>Siswa Pindahan / Baru</h3>
-            <input type="text" id="add-nama" placeholder="Nama Lengkap" style="margin-bottom:6px;">
-            <select id="add-kelas" style="margin-bottom:6px;">
-                <option value="XI PPLG 3">XI PPLG 3</option><option value="XI PPLG 4">XI PPLG 4</option>
-                <option value="XII PPLG 2">XII PPLG 2</option><option value="XII PPLG 3">XII PPLG 3</option><option value="XII PPLG 4">XII PPLG 4</option>
-            </select>
-            <button class="btn-primary" onclick="tambahSiswa()">+ Tambah Siswa</button>
-        </div>
-    </div>
+    <!-- ELEMENT HIDDEN UNTUK GENERATE PDF LEMBAR PROFIL -->
+    <div id="pdf-print-area" style="display:none;"></div>
 
     <script>
         const mapelKelas = {
             "KIK": ["XI PPLG 3", "XI PPLG 4", "XII PPLG 3", "XII PPLG 4"],
             "Basis Data": ["XII PPLG 2", "XII PPLG 3", "XII PPLG 4"]
         };
+
+        const semuaKelas = ["XI PPLG 3", "XI PPLG 4", "XII PPLG 2", "XII PPLG 3", "XII PPLG 4"];
 
         const rawData = [
             // XI PPLG 3
@@ -139,11 +580,26 @@
 
         let activeMapel = 'KIK';
         let activeKelas = 'XI PPLG 3';
-        let dbSiswa = JSON.parse(localStorage.getItem('db_guru_smk_v2'));
+        let currentTab = 'mapel'; 
+        
+        let dbSiswa = JSON.parse(localStorage.getItem('db_guru_smk_v5'));
+        let dbCatatanWali = JSON.parse(localStorage.getItem('db_catatan_wali_v1')) || [];
 
         if(!dbSiswa) {
             dbSiswa = rawData.map((s, idx) => ({
                 id: idx, kelas: s[0], nama: s[1],
+                hobi: '', citaCita: '', pencapaian: '',
+                pencapaianTercapai: false,
+                biodata: {
+                    namaAyah: '',
+                    namaIbu: '',
+                    kontakOrtu: '',
+                    tinggalDengan: 'Orang Tua',
+                    alamat: '',
+                    pekerjaanOrtu: '',
+                    kesehatan: '',
+                    catatanLatarBelakang: ''
+                },
                 nilai: {
                     "KIK": { absen: [], teori: [], praktik: [], karakter: 80, uts: 0, uas: 0 },
                     "Basis Data": { absen: [], teori: [], praktik: [], karakter: 80, uts: 0, uas: 0 }
@@ -152,52 +608,101 @@
             saveDB();
         }
 
-        function saveDB() { localStorage.setItem('db_guru_smk_v2', JSON.stringify(dbSiswa)); }
+        function saveDB() { 
+            localStorage.setItem('db_guru_smk_v5', JSON.stringify(dbSiswa));
+            localStorage.setItem('db_catatan_wali_v1', JSON.stringify(dbCatatanWali));
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebar-overlay').classList.toggle('show');
+        }
+
+        function setAppTitle(title) {
+            document.getElementById('app-title').innerText = title;
+        }
 
         function switchMapel(mapel) {
+            currentTab = 'mapel';
             activeMapel = mapel;
             activeKelas = mapelKelas[mapel][0];
             
-            document.getElementById('nav-kik').className = mapel === 'KIK' ? 'active' : '';
-            document.getElementById('nav-bd').className = mapel === 'Basis Data' ? 'active' : '';
-            document.getElementById('nav-periodik').className = '';
-            document.getElementById('nav-rekap').className = '';
+            setAppTitle(`📘 Mata Pelajaran: ${mapel}`);
+            updateSidebarActive(`nav-${mapel === 'KIK' ? 'kik' : 'bd'}`);
 
             document.getElementById('view-harian').style.display = 'block';
+            document.getElementById('view-profil').style.display = 'none';
             document.getElementById('view-periodik').style.display = 'none';
             document.getElementById('view-rekap').style.display = 'none';
+            document.getElementById('view-walikelas').style.display = 'none';
             document.getElementById('container-subnav').style.display = 'flex';
+
+            if(document.getElementById('sidebar').classList.contains('open')) toggleSidebar();
 
             renderSubNav();
             renderHarian();
         }
 
         function switchTab(tab) {
-            document.getElementById('nav-kik').className = '';
-            document.getElementById('nav-bd').className = '';
-            document.getElementById('nav-periodik').className = tab === 'periodik' ? 'active' : '';
-            document.getElementById('nav-rekap').className = tab === 'rekap' ? 'active' : '';
+            currentTab = tab;
+            updateSidebarActive(`nav-${tab}`);
 
-            document.getElementById('container-subnav').style.display = 'none';
             document.getElementById('view-harian').style.display = 'none';
+            document.getElementById('view-profil').style.display = tab === 'profil' ? 'block' : 'none';
             document.getElementById('view-periodik').style.display = tab === 'periodik' ? 'block' : 'none';
             document.getElementById('view-rekap').style.display = tab === 'rekap' ? 'block' : 'none';
+            document.getElementById('view-walikelas').style.display = tab === 'walikelas' ? 'block' : 'none';
 
-            if(tab === 'periodik') updateSiswaPeriodik();
-            if(tab === 'rekap') renderRekap();
+            if(document.getElementById('sidebar').classList.contains('open')) toggleSidebar();
+
+            if(tab === 'profil') {
+                setAppTitle("👤 Profil & Catatan Profil Siswa");
+                document.getElementById('container-subnav').style.display = 'flex';
+                activeKelas = semuaKelas[0];
+                renderSubNav();
+                renderProfil();
+            } else if(tab === 'walikelas') {
+                setAppTitle("🏫 Center Wali Kelas (XII PPLG 3)");
+                document.getElementById('container-subnav').style.display = 'none';
+                renderWaliKelas();
+            } else {
+                document.getElementById('container-subnav').style.display = 'none';
+                if(tab === 'periodik') { setAppTitle("📝 Input UTS / UAS / Sikap"); updateSiswaPeriodik(); }
+                if(tab === 'rekap') { setAppTitle("📊 Rekapitulasi Nilai & Backup"); renderRekap(); }
+            }
+        }
+
+        function updateSidebarActive(id) {
+            const btns = document.querySelectorAll('.sidebar-menu button');
+            btns.forEach(b => b.classList.remove('active', 'active-wk'));
+            const activeBtn = document.getElementById(id);
+            if(activeBtn) {
+                if(id === 'nav-walikelas') {
+                    activeBtn.classList.add('active-wk');
+                } else {
+                    activeBtn.classList.add('active');
+                }
+            }
         }
 
         function renderSubNav() {
             const sub = document.getElementById('container-subnav');
             sub.innerHTML = '';
-            mapelKelas[activeMapel].forEach(kls => {
+            
+            const listKelas = (currentTab === 'profil') ? semuaKelas : mapelKelas[activeMapel];
+
+            listKelas.forEach(kls => {
                 const btn = document.createElement('button');
                 btn.innerText = kls;
                 btn.className = kls === activeKelas ? 'active' : '';
                 btn.onclick = () => {
                     activeKelas = kls;
                     renderSubNav();
-                    renderHarian();
+                    if(currentTab === 'profil') {
+                        renderProfil();
+                    } else {
+                        renderHarian();
+                    }
                 };
                 sub.appendChild(btn);
             });
@@ -206,13 +711,28 @@
         function renderHarian() {
             document.getElementById('label-kbm').innerText = `Mata Pelajaran: ${activeMapel} | Kelas: ${activeKelas}`;
             const list = document.getElementById('list-siswa-harian');
+            const keyword = document.getElementById('search-harian').value.toLowerCase();
             list.innerHTML = '';
 
-            const siswas = dbSiswa.filter(s => s.kelas === activeKelas);
+            const siswas = dbSiswa.filter(s => s.kelas === activeKelas && s.nama.toLowerCase().includes(keyword));
+            
+            if(siswas.length === 0) {
+                list.innerHTML = `<div class="card" style="text-align:center; color:#94a3b8;">Siswa tidak ditemukan</div>`;
+                return;
+            }
+
             siswas.forEach(s => {
+                const dat = s.nilai[activeMapel];
+                let totAbsen = dat.absen.length;
+                let totHadir = dat.absen.filter(a => a === 'Hadir').length;
+                let pHadir = totAbsen > 0 ? ((totHadir/totAbsen)*100).toFixed(0) : 100;
+
                 list.innerHTML += `
                     <div class="card siswa-row">
-                        <div class="siswa-info">${s.nama}</div>
+                        <div class="siswa-info">
+                            <span>${s.nama}</span>
+                            <span class="badge-info">Hadir: ${pHadir}%</span>
+                        </div>
                         <div class="action-grid">
                             <button class="btn-act btn-h" onclick="quickAbsen(${s.id}, 'Hadir')">H</button>
                             <button class="btn-act btn-s" onclick="quickAbsen(${s.id}, 'Sakit')">S</button>
@@ -225,11 +745,120 @@
             });
         }
 
+        function renderProfil() {
+            document.getElementById('label-profil').innerText = `Profil & Catatan Karakter Siswa | Kelas: ${activeKelas}`;
+            const list = document.getElementById('list-siswa-profil');
+            const keyword = document.getElementById('search-profil').value.toLowerCase();
+            list.innerHTML = '';
+
+            const siswas = dbSiswa.filter(s => s.kelas === activeKelas && s.nama.toLowerCase().includes(keyword));
+
+            if(siswas.length === 0) {
+                list.innerHTML = `<div class="card" style="text-align:center; color:#94a3b8;">Siswa tidak ditemukan</div>`;
+                return;
+            }
+
+            siswas.forEach(s => {
+                const initial = s.nama.charAt(0).toUpperCase();
+                const isChecked = s.pencapaianTercapai ? 'checked' : '';
+                list.innerHTML += `
+                    <div class="card">
+                        <div id="card-export-${s.id}" class="profile-card-export">
+                            <div class="profile-header">
+                                <div class="profile-avatar">${initial}</div>
+                                <div style="flex-grow: 1;">
+                                    <div style="font-size:16px; font-weight:bold; color:#0f172a;">${s.nama}</div>
+                                    <div style="font-size:12px; color:#64748b;">Kelas: ${s.kelas}</div>
+                                </div>
+                                <div>
+                                    <span class="${s.pencapaianTercapai ? 'badge-success' : 'badge-warning'}">
+                                        ${s.pencapaianTercapai ? '✓ Tercapai' : '⏳ Belum'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
+                                <div>
+                                    <label style="font-size:10px; font-weight:bold; color:#64748b;">HOBI</label>
+                                    <input type="text" id="hobi-${s.id}" placeholder="Hobi" value="${s.hobi || ''}">
+                                </div>
+                                <div>
+                                    <label style="font-size:10px; font-weight:bold; color:#64748b;">CITA-CITA</label>
+                                    <input type="text" id="cita-${s.id}" placeholder="Cita-cita" value="${s.citaCita || ''}">
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size:10px; font-weight:bold; color:#64748b;">PENCAPAIAN & CATATAN</label>
+                                <textarea id="capai-${s.id}" placeholder="Pencapaian / Catatan Khusus Guru...">${s.pencapaian || ''}</textarea>
+                            </div>
+                            <label class="status-checkbox-label">
+                                <input type="checkbox" id="check-capai-${s.id}" ${isChecked} onchange="togglePencapaian(${s.id}, this.checked)">
+                                <span>Status Pencapaian: Check jika Target/Pencapaian Tercapai</span>
+                            </label>
+                        </div>
+
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button class="btn-primary" onclick="simpanProfilSiswa(${s.id})">💾 Simpan Profil</button>
+                            <button class="btn-primary" style="background:#0284c7;" onclick="exportKartuGambar(${s.id}, '${s.nama}')">📷 Download PNG</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function togglePencapaian(id, checked) {
+            const s = dbSiswa.find(x => x.id === id);
+            if(s) {
+                s.pencapaianTercapai = checked;
+                saveDB();
+                renderProfil();
+            }
+        }
+
+        function simpanProfilSiswa(id) {
+            const s = dbSiswa.find(x => x.id === id);
+            s.hobi = document.getElementById(`hobi-${id}`).value;
+            s.citaCita = document.getElementById(`cita-${id}`).value;
+            s.pencapaian = document.getElementById(`capai-${id}`).value;
+            s.pencapaianTercapai = document.getElementById(`check-capai-${id}`).checked;
+            saveDB();
+            alert(`Profil ${s.nama} berhasil disimpan!`);
+        }
+
+        function exportProfilSekelas() {
+            const list = dbSiswa.filter(s => s.kelas === activeKelas);
+            let txt = `=======================================\nREKAP CATATAN PROFIL & PENCAPAIAN SISWA\nKELAS: ${activeKelas}\n=======================================\n\n`;
+
+            list.forEach((s, idx) => {
+                txt += `${idx + 1}. NAMA: ${s.nama}\n`;
+                txt += `   - Hobi      : ${s.hobi || '-'}\n`;
+                txt += `   - Cita-cita : ${s.citaCita || '-'}\n`;
+                txt += `   - Status    : ${s.pencapaianTercapai ? '[✓] TERCAPAI' : '[ ] BELUM TERCAPAI'}\n`;
+                txt += `   - Catatan   : ${s.pencapaian || '-'}\n`;
+                txt += `---------------------------------------\n`;
+            });
+
+            const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Laporan_Profil_Catatan_${activeKelas.replace(/\s+/g, '_')}.txt`;
+            link.click();
+        }
+
+        function exportKartuGambar(id, nama) {
+            const el = document.getElementById(`card-export-${id}`);
+            html2canvas(el, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Profil_${nama.replace(/\s+/g, '_')}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
         function quickAbsen(id, st) {
             const s = dbSiswa.find(x => x.id === id);
             s.nilai[activeMapel].absen.push(st);
             saveDB();
-            alert(`Absen [${st}] tersimpan untuk ${s.nama}`);
+            renderHarian();
         }
 
         function quickNilai(id, val, el) {
@@ -245,20 +874,28 @@
             const m = document.getElementById('p-mapel').value;
             const selectKls = document.getElementById('p-kelas');
             
-            // Render option kelas sesuai mapel yang dipilih
             if(!selectKls.innerHTML || selectKls.getAttribute('data-mapel') !== m) {
                 selectKls.innerHTML = mapelKelas[m].map(k => `<option value="${k}">${k}</option>`).join('');
                 selectKls.setAttribute('data-mapel', m);
             }
 
-            const kls = selectKls.value;
+            filterDropdownPeriodik();
+        }
+
+        function filterDropdownPeriodik() {
+            const kls = document.getElementById('p-kelas').value;
+            const keyword = document.getElementById('search-periodik').value.toLowerCase();
             const selectSiswa = document.getElementById('p-siswa');
-            selectSiswa.innerHTML = dbSiswa.filter(s => s.kelas === kls).map(s => `<option value="${s.id}">${s.nama}</option>`).join('');
+            
+            const listFiltered = dbSiswa.filter(s => s.kelas === kls && s.nama.toLowerCase().includes(keyword));
+            selectSiswa.innerHTML = listFiltered.map(s => `<option value="${s.id}">${s.nama}</option>`).join('');
         }
 
         function simpanPeriodik() {
             const id = document.getElementById('p-siswa').value;
             const m = document.getElementById('p-mapel').value;
+            if(!id) return alert('Pilih nama siswa terlebih dahulu!');
+            
             const s = dbSiswa.find(x => x.id == id);
 
             const kar = parseFloat(document.getElementById('p-karakter').value);
@@ -276,9 +913,21 @@
             document.getElementById('p-uas').value = '';
         }
 
+        function hitungNA(s, mapel) {
+            const dat = s.nilai[mapel];
+            if(!dat) return 0;
+            let totAbsen = dat.absen.length;
+            let totHadir = dat.absen.filter(a => a === 'Hadir').length;
+            let pHadir = totAbsen > 0 ? ((totHadir/totAbsen)*100) : 0;
+            let rTeori = dat.teori.length > 0 ? (dat.teori.reduce((a,b)=>a+b,0)/dat.teori.length) : 0;
+            let rPraktik = dat.praktik.length > 0 ? (dat.praktik.reduce((a,b)=>a+b,0)/dat.praktik.length) : 0;
+            return ((pHadir*0.15) + (dat.karakter*0.15) + (rTeori*0.20) + (rPraktik*0.30) + (dat.uts*0.10) + (dat.uas*0.10)).toFixed(1);
+        }
+
         function renderRekap() {
             const m = document.getElementById('r-mapel').value;
             const selectKls = document.getElementById('r-kelas');
+            const keyword = document.getElementById('search-rekap').value.toLowerCase();
             
             if(!selectKls.innerHTML || selectKls.getAttribute('data-mapel') !== m) {
                 selectKls.innerHTML = mapelKelas[m].map(k => `<option value="${k}">${k}</option>`).join('');
@@ -289,7 +938,7 @@
             const tbody = document.getElementById('body-rekap');
             tbody.innerHTML = '';
 
-            const list = dbSiswa.filter(s => s.kelas === kls);
+            const list = dbSiswa.filter(s => s.kelas === kls && s.nama.toLowerCase().includes(keyword));
             list.forEach((s, idx) => {
                 const dat = s.nilai[m];
                 let totAbsen = dat.absen.length;
@@ -298,8 +947,7 @@
 
                 let rTeori = dat.teori.length > 0 ? (dat.teori.reduce((a,b)=>a+b,0)/dat.teori.length).toFixed(1) : 0;
                 let rPraktik = dat.praktik.length > 0 ? (dat.praktik.reduce((a,b)=>a+b,0)/dat.praktik.length).toFixed(1) : 0;
-
-                let na = ((pHadir*0.15) + (dat.karakter*0.15) + (rTeori*0.20) + (rPraktik*0.30) + (dat.uts*0.10) + (dat.uas*0.10)).toFixed(1);
+                let na = hitungNA(s, m);
 
                 tbody.innerHTML += `
                     <tr>
@@ -314,7 +962,8 @@
         function copyToExcel() {
             const m = document.getElementById('r-mapel').value;
             const kls = document.getElementById('r-kelas').value;
-            const list = dbSiswa.filter(s => s.kelas === kls);
+            const keyword = document.getElementById('search-rekap').value.toLowerCase();
+            const list = dbSiswa.filter(s => s.kelas === kls && s.nama.toLowerCase().includes(keyword));
 
             let txt = `REKAP NILAI ${m} - ${kls}\nNo\tNama\tKelas\tKehadiran (%)\tKarakter\tRata Teori\tRata Praktik\tUTS\tUAS\tNilai Akhir\n`;
 
@@ -326,7 +975,7 @@
 
                 let rTeori = dat.teori.length > 0 ? (dat.teori.reduce((a,b)=>a+b,0)/dat.teori.length).toFixed(1) : 0;
                 let rPraktik = dat.praktik.length > 0 ? (dat.praktik.reduce((a,b)=>a+b,0)/dat.praktik.length).toFixed(1) : 0;
-                let na = ((pHadir*0.15) + (dat.karakter*0.15) + (rTeori*0.20) + (rPraktik*0.30) + (dat.uts*0.10) + (dat.uas*0.10)).toFixed(1);
+                let na = hitungNA(s, m);
 
                 txt += `${idx+1}\t${s.nama}\t${s.kelas}\t${pHadir}%\t${dat.karakter}\t${rTeori}\t${rPraktik}\t${dat.uts}\t${dat.uas}\t${na}\n`;
             });
@@ -336,6 +985,67 @@
             });
         }
 
+        function downloadCSV() {
+            const m = document.getElementById('r-mapel').value;
+            const kls = document.getElementById('r-kelas').value;
+            const list = dbSiswa.filter(s => s.kelas === kls);
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "No,Nama,Kelas,Kehadiran (%),Karakter,Rata Teori,Rata Praktik,UTS,UAS,Nilai Akhir\n";
+
+            list.forEach((s, idx) => {
+                const dat = s.nilai[m];
+                let totAbsen = dat.absen.length;
+                let totHadir = dat.absen.filter(a => a === 'Hadir').length;
+                let pHadir = totAbsen > 0 ? ((totHadir/totAbsen)*100).toFixed(0) : 0;
+
+                let rTeori = dat.teori.length > 0 ? (dat.teori.reduce((a,b)=>a+b,0)/dat.teori.length).toFixed(1) : 0;
+                let rPraktik = dat.praktik.length > 0 ? (dat.praktik.reduce((a,b)=>a+b,0)/dat.praktik.length).toFixed(1) : 0;
+                let na = hitungNA(s, m);
+
+                csvContent += `"${idx+1}","${s.nama}","${s.kelas}","${pHadir}%","${dat.karakter}","${rTeori}","${rPraktik}","${dat.uts}","${dat.uas}","${na}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Rekap_Nilai_${m}_${kls}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        /* FITUR TAMBAHAN: EKSPOR SELURUH SISWA (SEMUA KELAS) */
+        function exportSeluruhSiswaCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // Tambahkan BOM Unicode untuk Excel UTF-8
+            csvContent += "No,ID Siswa,Kelas,Nama Lengkap,Hobi,Cita-Cita,NA KIK,NA Basis Data,Nama Ayah,Nama Ibu,Kontak Ortu,Alamat\n";
+
+            dbSiswa.forEach((s, idx) => {
+                let naKIK = hitungNA(s, 'KIK');
+                let naBD = hitungNA(s, 'Basis Data');
+                let bio = s.biodata || {};
+
+                // Sanitasi petik dua agar format CSV tidak merusak tabel Excel
+                let nama = (s.nama || '').replace(/"/g, '""');
+                let hobi = (s.hobi || '').replace(/"/g, '""');
+                let cita = (s.citaCita || '').replace(/"/g, '""');
+                let ayah = (bio.namaAyah || '').replace(/"/g, '""');
+                let ibu = (bio.namaIbu || '').replace(/"/g, '""');
+                let kontak = (bio.kontakOrtu || '').replace(/"/g, '""');
+                let alamat = (bio.alamat || '').replace(/"/g, '""');
+
+                csvContent += `"${idx+1}","${s.id}","${s.kelas}","${nama}","${hobi}","${cita}","${naKIK}","${naBD}","${ayah}","${ibu}","${kontak}","${alamat}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Data_Seluruh_Siswa_Sekolah_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         function tambahSiswa() {
             const nama = document.getElementById('add-nama').value;
             const kls = document.getElementById('add-kelas').value;
@@ -343,6 +1053,8 @@
 
             dbSiswa.push({
                 id: Date.now(), kelas: kls, nama: nama,
+                hobi: '', citaCita: '', pencapaian: '', pencapaianTercapai: false,
+                biodata: { namaAyah: '', namaIbu: '', kontakOrtu: '', tinggalDengan: 'Orang Tua', alamat: '', pekerjaanOrtu: '', kesehatan: '', catatanLatarBelakang: '' },
                 nilai: {
                     "KIK": { absen: [], teori: [], praktik: [], karakter: 80, uts: 0, uas: 0 },
                     "Basis Data": { absen: [], teori: [], praktik: [], karakter: 80, uts: 0, uas: 0 }
@@ -351,6 +1063,436 @@
             saveDB();
             document.getElementById('add-nama').value = '';
             alert('Siswa baru ditambahkan!');
+        }
+
+        /* LOGIKA LOGIK WALI KELAS (XII PPLG 3) */
+        function renderWaliKelas() {
+            const siswaXII3 = dbSiswa.filter(s => s.kelas === 'XII PPLG 3');
+            
+            // Hitung Remedial
+            let countRemed = 0;
+            siswaXII3.forEach(s => {
+                let naKIK = parseFloat(hitungNA(s, 'KIK'));
+                let naBD = parseFloat(hitungNA(s, 'Basis Data'));
+                if((naKIK > 0 && naKIK < 75) || (naBD > 0 && naBD < 75)) countRemed++;
+            });
+
+            // Render Stats Dashboard
+            document.getElementById('wk-total-siswa').innerText = siswaXII3.length;
+            document.getElementById('wk-pencapaian-ok').innerText = siswaXII3.filter(s => s.pencapaianTercapai).length;
+            document.getElementById('wk-pencapaian-pending').innerText = siswaXII3.filter(s => !s.pencapaianTercapai).length;
+            document.getElementById('wk-siswa-remed').innerText = countRemed;
+
+            // Fill Dropdown Siswa
+            const selKasus = document.getElementById('wk-select-siswa');
+            const selSurat = document.getElementById('wk-surat-siswa');
+            
+            const optionsHtml = siswaXII3.map(s => `<option value="${s.nama}">${s.nama}</option>`).join('');
+            selKasus.innerHTML = optionsHtml;
+            selSurat.innerHTML = optionsHtml;
+
+            renderBiodataWaliKelas();
+            renderRekapPresensiWali();
+            renderRemedialTracker();
+            renderListCatatanWali();
+            generateSuratPanggilan();
+        }
+
+        function switchWkSub(sub) {
+            document.getElementById('wk-sub-biodata').style.display = sub === 'biodata' ? 'block' : 'none';
+            document.getElementById('wk-sub-presensi').style.display = sub === 'presensi' ? 'block' : 'none';
+            document.getElementById('wk-sub-remedial').style.display = sub === 'remedial' ? 'block' : 'none';
+            document.getElementById('wk-sub-kasus').style.display = sub === 'rekap-kasus' ? 'block' : 'none';
+            document.getElementById('wk-sub-panggilan').style.display = sub === 'panggilan' ? 'block' : 'none';
+
+            // Active button color
+            document.getElementById('btn-wk-biodata').style.background = sub === 'biodata' ? '#0f172a' : '#64748b';
+            document.getElementById('btn-wk-presensi').style.background = sub === 'presensi' ? '#0f172a' : '#64748b';
+            document.getElementById('btn-wk-remedial').style.background = sub === 'remedial' ? '#0f172a' : '#64748b';
+            document.getElementById('btn-wk-kasus').style.background = sub === 'rekap-kasus' ? '#0f172a' : '#64748b';
+            document.getElementById('btn-wk-panggilan').style.background = sub === 'panggilan' ? '#0f172a' : '#64748b';
+        }
+
+        function renderBiodataWaliKelas() {
+            const container = document.getElementById('list-biodata-walikelas');
+            const keyword = document.getElementById('search-walikelas').value.toLowerCase();
+            container.innerHTML = '';
+
+            const siswas = dbSiswa.filter(s => {
+                if(s.kelas !== 'XII PPLG 3') return false;
+                const bio = s.biodata || {};
+                const textSearch = `${s.nama} ${bio.namaAyah} ${bio.namaIbu} ${bio.alamat} ${bio.tinggalDengan} ${bio.pekerjaanOrtu}`.toLowerCase();
+                return textSearch.includes(keyword);
+            });
+
+            if(siswas.length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:20px;">Siswa atau data biodata tidak ditemukan.</div>`;
+                return;
+            }
+
+            siswas.forEach(s => {
+                if(!s.biodata) s.biodata = { namaAyah: '', namaIbu: '', kontakOrtu: '', tinggalDengan: 'Orang Tua', alamat: '', pekerjaanOrtu: '', kesehatan: '', catatanLatarBelakang: '' };
+                const b = s.biodata;
+
+                container.innerHTML += `
+                    <div class="card" style="border-left:4px solid var(--primary);">
+                        <div style="font-size:15px; font-weight:bold; color:#0f172a; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>👤 ${s.nama}</span>
+                            <div style="display:flex; gap:4px;">
+                                <span class="badge-info">XII PPLG 3</span>
+                                <button class="btn-primary" style="background:#0284c7; padding:4px 8px; font-size:10px;" onclick="cetakProfilPDF(${s.id})">🖨️ Cetak PDF Lembar Profil</button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-grid-2">
+                            <div>
+                                <span class="form-label">👨 NAMA AYAH</span>
+                                <input type="text" id="bio-ayah-${s.id}" value="${b.namaAyah || ''}" placeholder="Nama Ayah Kandung/Wali">
+                            </div>
+                            <div>
+                                <span class="form-label">👩 NAMA IBU</span>
+                                <input type="text" id="bio-ibu-${s.id}" value="${b.namaIbu || ''}" placeholder="Nama Ibu Kandung">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div>
+                                <span class="form-label">📞 KONTAK ORTU / WALI (WA)</span>
+                                <input type="text" id="bio-kontak-${s.id}" value="${b.kontakOrtu || ''}" placeholder="08xxxxxxxxxx">
+                            </div>
+                            <div>
+                                <span class="form-label">🏠 TINGGAL DENGAN</span>
+                                <select id="bio-tinggal-${s.id}">
+                                    <option value="Orang Tua" ${b.tinggalDengan === 'Orang Tua' ? 'selected' : ''}>Orang Tua Kandung</option>
+                                    <option value="Wali / Saudara" ${b.tinggalDengan === 'Wali / Saudara' ? 'selected' : ''}>Wali / Kakek / Nenek / Saudara</option>
+                                    <option value="Kost / Mandiri" ${b.tinggalDengan === 'Kost / Mandiri' ? 'selected' : ''}>Kost / Tinggal Sendiri</option>
+                                    <option value="Panti / Asrama" ${b.tinggalDengan === 'Panti / Asrama' ? 'selected' : ''}>Panti / Asrama</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div>
+                                <span class="form-label">💼 PEKERJAAN ORANG TUA</span>
+                                <input type="text" id="bio-kerja-${s.id}" value="${b.pekerjaanOrtu || ''}" placeholder="Contoh: Wiraswasta / Buruh / PNS">
+                            </div>
+                            <div>
+                                <span class="form-label">🏥 RIWAYAT PENYAKIT / KESEHATAN</span>
+                                <input type="text" id="bio-sehat-${s.id}" value="${b.kesehatan || ''}" placeholder="Contoh: Asma / Alergi / Tidak ada">
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:8px;">
+                            <span class="form-label">📍 ALAMAT RUMAH LENGKAP</span>
+                            <input type="text" id="bio-alamat-${s.id}" value="${b.alamat || ''}" placeholder="Jalan, RT/RW, Desa, Kecamatan">
+                        </div>
+
+                        <div style="margin-bottom:10px;">
+                            <span class="form-label">🔍 CATATAN SELUK-BELUK / LATAR BELAKANG KHUSUS</span>
+                            <textarea id="bio-bg-${s.id}" placeholder="Catatan kondisi keluarga, ekonomi, sifat dominan, latar belakang yang wajib diketahui wali kelas...">${b.catatanLatarBelakang || ''}</textarea>
+                        </div>
+
+                        <button class="btn-primary" style="background:#0284c7;" onclick="simpanBiodataSiswa(${s.id})">💾 Simpan Biodata ${s.nama.split(' ')[0]}</button>
+                    </div>
+                `;
+            });
+        }
+
+        /* FITUR REKAP PRESENSI KUMULATIF & SANKSI WALI KELAS */
+        function renderRekapPresensiWali() {
+            const tbody = document.getElementById('body-rekap-presensi-wk');
+            tbody.innerHTML = '';
+
+            const list = dbSiswa.filter(s => s.kelas === 'XII PPLG 3');
+            list.forEach((s, idx) => {
+                // Kombinasi absen dari semua mapel
+                let allAbsen = [];
+                Object.keys(s.nilai).forEach(m => {
+                    allAbsen = allAbsen.concat(s.nilai[m].absen);
+                });
+
+                let tot = allAbsen.length;
+                let h = allAbsen.filter(a => a === 'Hadir').length;
+                let sakit = allAbsen.filter(a => a === 'Sakit').length;
+                let iz = allAbsen.filter(a => a === 'Izin').length;
+                let alp = allAbsen.filter(a => a === 'Alpha').length;
+
+                let pHadir = tot > 0 ? ((h / tot) * 100).toFixed(0) : 100;
+                
+                let statusBadge = '<span class="badge-success">Aman (Disiplin)</span>';
+                if(alp >= 3) {
+                    statusBadge = '<span class="badge-danger">⚠️ Panggilan Ortu (Alpha ≥ 3)</span>';
+                } else if(alp >= 1 || pHadir < 85) {
+                    statusBadge = '<span class="badge-warning">⚠️ Teguran Wali Kelas</span>';
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td style="text-align:left; font-weight:bold;">${s.nama}</td>
+                        <td>${h}</td><td>${sakit}</td><td>${iz}</td><td><b>${alp}</b></td>
+                        <td><b>${pHadir}%</b></td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function exportPresensiExcel() {
+            const list = dbSiswa.filter(s => s.kelas === 'XII PPLG 3');
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "No,Nama Siswa,Hadir (H),Sakit (S),Izin (I),Alpha (A),Persentase Kehadiran (%)\n";
+
+            list.forEach((s, idx) => {
+                let allAbsen = [];
+                Object.keys(s.nilai).forEach(m => { allAbsen = allAbsen.concat(s.nilai[m].absen); });
+                let tot = allAbsen.length;
+                let h = allAbsen.filter(a => a === 'Hadir').length;
+                let sakit = allAbsen.filter(a => a === 'Sakit').length;
+                let iz = allAbsen.filter(a => a === 'Izin').length;
+                let alp = allAbsen.filter(a => a === 'Alpha').length;
+                let pHadir = tot > 0 ? ((h / tot) * 100).toFixed(0) : 100;
+
+                csvContent += `"${idx+1}","${s.nama}","${h}","${sakit}","${iz}","${alp}","${pHadir}%"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Rekap_Kehadiran_XII_PPLG_3.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        /* FITUR REMEDIAL TRACKER (MAPEL MERAH NA < 75) */
+        function renderRemedialTracker() {
+            const tbody = document.getElementById('body-remedial-tracker');
+            tbody.innerHTML = '';
+
+            const list = dbSiswa.filter(s => s.kelas === 'XII PPLG 3');
+            let count = 0;
+
+            list.forEach(s => {
+                ['KIK', 'Basis Data'].forEach(m => {
+                    let na = parseFloat(hitungNA(s, m));
+                    if(na > 0 && na < 75) {
+                        count++;
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${count}</td>
+                                <td style="text-align:left; font-weight:bold;">${s.nama}</td>
+                                <td><span class="badge-info">${m}</span></td>
+                                <td style="color:var(--danger); font-weight:bold;">${na}</td>
+                                <td><span class="badge-danger">Perlu Remedial</span></td>
+                                <td>
+                                    <button class="btn-primary" style="background:var(--warning); color:black; padding:4px 8px; font-size:10px;" onclick="ingatkanRemedial('${s.nama}', '${m}')">📱 WA Siswa</button>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+            });
+
+            if(count === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="color:var(--success); font-weight:bold; padding:15px;">🎉 Luar Biasa! Tidak ada siswa XII PPLG 3 yang mendapat nilai di bawah KKM (<75).</td></tr>`;
+            }
+        }
+
+        function ingatkanRemedial(nama, mapel) {
+            alert(`Pesan pengingat remedial ${mapel} telah dicopy! Anda dapat meneruskannya ke WA siswa ${nama}.`);
+        }
+
+        /* FITUR CETAK PDF LEMBAR PROFIL SISWA */
+        function cetakProfilPDF(id) {
+            const s = dbSiswa.find(x => x.id === id);
+            if(!s) return;
+
+            const b = s.biodata || {};
+            const printArea = document.getElementById('pdf-print-area');
+            printArea.style.display = 'block';
+
+            printArea.innerHTML = `
+                <div class="pdf-print-container">
+                    <div class="pdf-header">
+                        <h2 style="margin:0;">LEMBAR PROFIL SISWA & WALI KELAS</h2>
+                        <h3 style="margin:5px 0 0 0; color:#2563eb;">SMK - KELAS XII PPLG 3</h3>
+                    </div>
+                    
+                    <table class="pdf-table">
+                        <tr><td class="label-cell">Nama Lengkap Siswa</td><td><b>${s.nama}</b></td></tr>
+                        <tr><td class="label-cell">Kelas</td><td>${s.kelas}</td></tr>
+                        <tr><td class="label-cell">Hobi</td><td>${s.hobi || '-'}</td></tr>
+                        <tr><td class="label-cell">Cita-Cita</td><td>${s.citaCita || '-'}</td></tr>
+                        <tr><td class="label-cell">Nama Ayah / Wali</td><td>${b.namaAyah || '-'}</td></tr>
+                        <tr><td class="label-cell">Nama Ibu</td><td>${b.namaIbu || '-'}</td></tr>
+                        <tr><td class="label-cell">Kontak Ortu (WA)</td><td>${b.kontakOrtu || '-'}</td></tr>
+                        <tr><td class="label-cell">Tinggal Dengan</td><td>${b.tinggalDengan || '-'}</td></tr>
+                        <tr><td class="label-cell">Pekerjaan Orang Tua</td><td>${b.pekerjaanOrtu || '-'}</td></tr>
+                        <tr><td class="label-cell">Riwayat Kesehatan</td><td>${b.kesehatan || '-'}</td></tr>
+                        <tr><td class="label-cell">Alamat Rumah</td><td>${b.alamat || '-'}</td></tr>
+                        <tr><td class="label-cell">Pencapaian Siswa</td><td>${s.pencapaian || '-'}</td></tr>
+                        <tr><td class="label-cell">Catatan Background Wali Kelas</td><td>${b.catatanLatarBelakang || '-'}</td></tr>
+                    </table>
+
+                    <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+                        <div style="text-align: center; width: 40%;">
+                            <p>Mengetahui,<br>Orang Tua / Wali Siswa</p>
+                            <br><br><br>
+                            <p>( _______________________ )</p>
+                        </div>
+                        <div style="text-align: center; width: 40%;">
+                            <p>Wali Kelas XII PPLG 3</p>
+                            <br><br><br>
+                            <p>( _______________________ )</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const opt = {
+                margin:       0.5,
+                filename:     `Profil_Perwalian_${s.nama.replace(/\s+/g, '_')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(printArea).save().then(() => {
+                printArea.style.display = 'none';
+                printArea.innerHTML = '';
+            });
+        }
+
+        function simpanBiodataSiswa(id) {
+            const s = dbSiswa.find(x => x.id === id);
+            if(!s) return;
+
+            s.biodata = {
+                namaAyah: document.getElementById(`bio-ayah-${id}`).value,
+                namaIbu: document.getElementById(`bio-ibu-${id}`).value,
+                kontakOrtu: document.getElementById(`bio-kontak-${id}`).value,
+                tinggalDengan: document.getElementById(`bio-tinggal-${id}`).value,
+                pekerjaanOrtu: document.getElementById(`bio-kerja-${id}`).value,
+                kesehatan: document.getElementById(`bio-sehat-${id}`).value,
+                alamat: document.getElementById(`bio-alamat-${id}`).value,
+                catatanLatarBelakang: document.getElementById(`bio-bg-${id}`).value
+            };
+
+            saveDB();
+            alert(`Biodata & Background ${s.nama} berhasil diperbarui!`);
+        }
+
+        function simpanCatatanWaliKelas() {
+            const nama = document.getElementById('wk-select-siswa').value;
+            const jenis = document.getElementById('wk-jenis-catatan').value;
+            const isi = document.getElementById('wk-isi-catatan').value;
+
+            if(!isi) return alert('Isi catatan tidak boleh kosong!');
+
+            dbCatatanWali.push({
+                id: Date.now(),
+                tgl: new Date().toLocaleDateString('id-ID'),
+                nama: nama,
+                jenis: jenis,
+                catatan: isi
+            });
+
+            saveDB();
+            document.getElementById('wk-isi-catatan').value = '';
+            renderWaliKelas();
+            alert('Catatan bimbingan berhasil disimpan!');
+        }
+
+        function renderListCatatanWali() {
+            const container = document.getElementById('wk-list-catatan');
+            container.innerHTML = '';
+
+            if(dbCatatanWali.length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:12px;">Belum ada catatan khusus Wali Kelas.</div>`;
+                return;
+            }
+
+            dbCatatanWali.slice().reverse().forEach(c => {
+                container.innerHTML += `
+                    <div style="border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px; background:#fff;">
+                        <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:4px;">
+                            <span>${c.nama}</span>
+                            <span style="font-size:10px; color:#64748b;">${c.tgl}</span>
+                        </div>
+                        <div style="font-size:11px; margin-bottom:4px;">
+                            <span class="badge-info">${c.jenis}</span>
+                        </div>
+                        <div style="color:#334155; font-size:12px;">${c.catatan}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function generateSuratPanggilan() {
+            const nama = document.getElementById('wk-surat-siswa').value;
+            const alasan = document.getElementById('wk-surat-alasan').value || '[Sebutkan Alasan Panggilan]';
+            const waktu = document.getElementById('wk-surat-waktu').value || '[Hari, Tanggal & Jam]';
+
+            const surat = `Yth. Bapak/Ibu Orang Tua / Wali dari:
+*${nama}* (Kelas XII PPLG 3)
+
+Dengan hormat,
+Sehubungan dengan kegiatan evaluasi & bimbingan siswa di sekolah, kami mengharapkan kehadiran Bapak/Ibu Orang Tua/Wali pada:
+
+📅 Hari/Tgl : ${waktu}
+🏫 Tempat   : Ruang Perwalian / BK SMK
+🎯 Agenda   : ${alasan}
+
+Demikian surat pemberitahuan ini kami sampaikan. Atas perhatian dan kerja samanya kami ucapkan terima kasih.
+
+Salam hormat,
+*Wali Kelas XII PPLG 3*`;
+
+            document.getElementById('wk-surat-preview').innerText = surat;
+        }
+
+        function copySuratPanggilan() {
+            const txt = document.getElementById('wk-surat-preview').innerText;
+            navigator.clipboard.writeText(txt).then(() => {
+                alert('Pesan Surat Panggilan berhasil di-copy! Siap dikirim via WhatsApp.');
+            });
+        }
+
+        // BACKUP & RESTORE DATA
+        function backupData() {
+            const dataBackup = { dbSiswa, dbCatatanWali };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataBackup));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `Backup_Guru_SMK_V5_${new Date().toISOString().slice(0,10)}.json`);
+            dlAnchorElem.click();
+        }
+
+        function restoreData(event) {
+            const fileReader = new FileReader();
+            fileReader.onload = function(e) {
+                try {
+                    const parsedData = JSON.parse(e.target.result);
+                    if (parsedData.dbSiswa) {
+                        dbSiswa = parsedData.dbSiswa;
+                        dbCatatanWali = parsedData.dbCatatanWali || [];
+                        saveDB();
+                        alert('Database & Catatan Wali Kelas berhasil dipulihkan!');
+                        location.reload();
+                    } else if(Array.isArray(parsedData)) {
+                        dbSiswa = parsedData;
+                        saveDB();
+                        alert('Database siswa berhasil dipulihkan!');
+                        location.reload();
+                    } else {
+                        alert('Format file JSON tidak valid!');
+                    }
+                } catch (err) {
+                    alert('Gagal membaca file backup!');
+                }
+            };
+            fileReader.readAsText(event.target.files[0]);
         }
 
         // Init App
